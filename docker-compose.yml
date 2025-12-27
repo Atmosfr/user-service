@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:18-alpine@sha256:e3b523f9c2c4e6d9b7cdb85b0c31650468bab97ad2df22909615dd61dde88333
+    environment:
+      POSTGRES_DB: user_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d user_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
