@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func NewDB(ctx context.Context, dsn string) (*sql.DB, error) {
