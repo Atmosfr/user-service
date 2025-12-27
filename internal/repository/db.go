@@ -2,33 +2,28 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	config, err := pgxpool.ParseConfig(dsn)
+func NewPool(ctx context.Context, dsn string) (*sql.DB, error) {
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	config.MaxConns = 20
-	config.MinConns = 4
-	config.MaxConnLifetime = time.Hour
-	config.HealthCheckPeriod = 30 * time.Second
+	db.SetConnMaxLifetime(time.Hour)
+	db.SetMaxIdleConns(4)
+	db.SetMaxOpenConns(30)
 
-	pool, err := pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
+	if err = db.PingContext(ctx); err != nil {
+		db.Close()
 		return nil, err
 	}
 
-	if err = pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, err
-	}
-
-	slog.Info("connected to database", "max_conns", config.MaxConns)
-	return pool, nil
+	slog.Info("connected to database via database/sql")
+	return db, nil
 }
