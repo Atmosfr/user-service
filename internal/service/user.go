@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/Atmosfr/user-service/internal/auth"
 	"github.com/Atmosfr/user-service/internal/models"
 	"github.com/Atmosfr/user-service/internal/repository"
 	"github.com/Atmosfr/user-service/internal/validation"
@@ -12,15 +13,20 @@ import (
 
 type UserService interface {
 	Register(ctx context.Context, email, password, username string) (*models.User, error)
-	Login(ctx context.Context, email, password string) (*models.User, error)
+	Login(ctx context.Context, email, password string) (*LoginResponse, error)
 }
 
 type userService struct {
 	repo repository.UserRepository
 }
 
+type LoginResponse struct {
+	User  *models.User `json:"user"`
+	Token string       `json:"token"`
+}
+
 func (u *userService) Register(ctx context.Context, email, password, username string) (*models.User, error) {
-	if err:= validation.ValidateRegister(email, password, username); err != nil {
+	if err := validation.ValidateRegister(email, password, username); err != nil {
 		slog.Warn("registration validation failed", "email", email, "err", err)
 		return nil, err
 	}
@@ -53,8 +59,8 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 	return user, nil
 }
 
-func (u *userService) Login(ctx context.Context, email, password string) (*models.User, error) {
-	if err := validation.ValidateLogin(email, password);  err != nil {
+func (u *userService) Login(ctx context.Context, email, password string) (*LoginResponse, error) {
+	if err := validation.ValidateLogin(email, password); err != nil {
 		slog.Warn("login validation failed", "email", email, "err", err)
 		return nil, err
 	}
@@ -70,9 +76,21 @@ func (u *userService) Login(ctx context.Context, email, password string) (*model
 		return nil, repository.ErrInvalidPassword
 	}
 
+	token, err := auth.GenerateToken(user)
+	if err != nil {
+		slog.Error("failed to generate token", "err", err)
+		return nil, err
+	}
+
 	user.PasswordHash = ""
+
+	loginResp := &LoginResponse{
+		User:  user,
+		Token: token,
+	}
 	slog.Info("login successful", "email", email)
-	return user, nil
+
+	return loginResp, nil
 }
 
 func NewUserService(repo repository.UserRepository) UserService {
