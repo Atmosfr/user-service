@@ -18,7 +18,7 @@ func runMigrations(db *sql.DB) error {
 func main() {
 	ctx := context.Background()
 
-	dsn := "host=localhost user=postgres password=postgres dbname=user_service_db port=5432 sslmode=disable"
+	dsn := "host=db user=postgres password=postgres dbname=user_service_db port=5432 sslmode=disable"
 
 	db, err := repository.NewDB(ctx, dsn)
 	if err != nil {
