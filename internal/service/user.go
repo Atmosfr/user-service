@@ -12,7 +12,7 @@ import (
 )
 
 type UserService interface {
-	Register(ctx context.Context, email, password, username string) (*models.User, error)
+	Register(ctx context.Context, email, password, username string) (*LoginResponse, error)
 	Login(ctx context.Context, email, password string) (*LoginResponse, error)
 }
 
@@ -25,7 +25,7 @@ type LoginResponse struct {
 	Token string       `json:"token"`
 }
 
-func (u *userService) Register(ctx context.Context, email, password, username string) (*models.User, error) {
+func (u *userService) Register(ctx context.Context, email, password, username string) (*LoginResponse, error) {
 	if err := validation.ValidateRegister(email, password, username); err != nil {
 		slog.Warn("registration validation failed", "email", email, "err", err)
 		return nil, err
@@ -53,10 +53,19 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 		return nil, err
 	}
 
+	token, err := auth.GenerateToken(user)
+	if err != nil {
+		slog.Error("failed to generate token", "err", err)
+		return nil, err
+	}
+
 	user.PasswordHash = ""
 
 	slog.Info("user registered", "email", email)
-	return user, nil
+	return &LoginResponse{
+		User:  user,
+		Token: token,
+	}, nil
 }
 
 func (u *userService) Login(ctx context.Context, email, password string) (*LoginResponse, error) {
@@ -84,13 +93,12 @@ func (u *userService) Login(ctx context.Context, email, password string) (*Login
 
 	user.PasswordHash = ""
 
-	loginResp := &LoginResponse{
-		User:  user,
-		Token: token,
-	}
 	slog.Info("login successful", "email", email)
 
-	return loginResp, nil
+	return &LoginResponse{
+		User:  user,
+		Token: token,
+	}, nil
 }
 
 func NewUserService(repo repository.UserRepository) UserService {
