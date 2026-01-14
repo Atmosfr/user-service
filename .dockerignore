@@ -1,0 +1,9 @@
+.git
+.gitignore
+README.md
+.env
+*.md
+*.log
+Dockerfile
+docker-compose.yml
+wait-for-db.sh
