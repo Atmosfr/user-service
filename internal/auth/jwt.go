@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/Atmosfr/user-service/internal/models"
@@ -14,7 +15,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var jwtSecret = []byte("secret")
+var jwtSecret = os.Getenv("JWT_SECRET")
 
 func GenerateToken(user *models.User) (string, error) {
 	claims := Claims{
