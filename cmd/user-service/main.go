@@ -11,8 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Atmosfr/user-service/internal/handlers"
 	"github.com/Atmosfr/user-service/internal/middleware"
 	"github.com/Atmosfr/user-service/internal/repository"
+	"github.com/Atmosfr/user-service/internal/service"
 	"github.com/pressly/goose/v3"
 )
 
@@ -65,6 +67,9 @@ func main() {
 
 	// router
 	mux := http.NewServeMux()
+	svc := service.NewUserService(repository.NewUserRepository(db))
+
+	mux.Handle("POST /register", handlers.RegisterHandler(svc))
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
 	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
 
