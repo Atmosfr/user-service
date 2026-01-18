@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Atmosfr/user-service/internal/auth"
+	"github.com/Atmosfr/user-service/internal/models"
 )
 
 type contextKey string
@@ -44,4 +45,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func GetUserFromContext(ctx context.Context) (*models.User, bool) {
+	user, ok := ctx.Value(userKey).(*models.User)
+	return user, ok
 }
