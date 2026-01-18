@@ -62,8 +62,8 @@ func main() {
 
 	//router
 	mux:= http.NewServeMux()
-	mux.HandleFunc("/health", healthHandler)
-	mux.Handle("/protected", middleware.AuthMiddleware(http.HandlerFunc(protectedHandler)))
+	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
+	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(protectedHandler)))
 
 	//server
 	srv := &http.Server{
