@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/Atmosfr/user-service/internal/middleware"
 	"github.com/Atmosfr/user-service/internal/repository"
@@ -38,7 +41,8 @@ func protectedHandler(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	dsn := "host=db user=postgres password=postgres dbname=user_service_db port=5432 sslmode=disable"
 
@@ -47,8 +51,8 @@ func main() {
 		slog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-
 	defer db.Close()
+
 	if err := runMigrations(db); err != nil {
 		slog.Error("failed to run migrations", "error", err)
 		os.Exit(1)
@@ -56,5 +60,39 @@ func main() {
 
 	slog.Info("database migrations applied successfully")
 
-	select {}
+	//router
+	mux:= http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler)
+	mux.Handle("/protected", middleware.AuthMiddleware(http.HandlerFunc(protectedHandler)))
+
+	//server
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	//graceful shutdown
+	go func(){
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+
+		slog.Info("shutting down server...")
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10 * time.Second)
+		defer shutdownCancel()
+
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown failed", "error", err)
+		} else {
+			slog.Info("server shutdown completed")
+		}
+	}()
+
+	slog.Info("starting server on :8080")
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Error("server failed", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("server stopped")
 }
