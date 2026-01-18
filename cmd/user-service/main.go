@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 
+	"github.com/Atmosfr/user-service/internal/middleware"
 	"github.com/Atmosfr/user-service/internal/repository"
 	"github.com/pressly/goose/v3"
 )
@@ -14,6 +17,25 @@ func runMigrations(db *sql.DB) error {
 	goose.SetDialect("postgres")
 	return goose.Up(db, "migrations")
 }
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func protectedHandler(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "user not found in context", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id": user.ID,
+		"role": user.Role,
+	})
+}
+
 
 func main() {
 	ctx := context.Background()
