@@ -34,11 +34,14 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"user_id": user.ID,
-		"role": user.Role,
+		"id":         user.ID,
+		"email":      user.Email,
+		"username":   user.Username,
+		"role":       user.Role,
+		"created_at": user.CreatedAt,
+		"is_active":  user.IsActive,
 	})
 }
-
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -60,25 +63,25 @@ func main() {
 
 	slog.Info("database migrations applied successfully")
 
-	//router
-	mux:= http.NewServeMux()
+	// router
+	mux := http.NewServeMux()
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
 	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
 
-	//server
+	// server
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,
 	}
 
-	//graceful shutdown
-	go func(){
+	// graceful shutdown
+	go func() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		<-sigChan
 
 		slog.Info("shutting down server...")
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10 * time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
 
 		if err := srv.Shutdown(shutdownCtx); err != nil {
