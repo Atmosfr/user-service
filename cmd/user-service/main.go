@@ -26,7 +26,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-func protectedHandler(w http.ResponseWriter, r *http.Request) {
+func meHandler(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUserFromContext(r.Context())
 	if !ok {
 		http.Error(w, "user not found in context", http.StatusInternalServerError)
@@ -63,7 +63,7 @@ func main() {
 	//router
 	mux:= http.NewServeMux()
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
-	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(protectedHandler)))
+	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
 
 	//server
 	srv := &http.Server{
