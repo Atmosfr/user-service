@@ -71,33 +71,33 @@ func LoginHandler(svc service.UserService) http.HandlerFunc {
 		defer r.Body.Close()
 
 		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": "Method not allowed",
 			})
-			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
 		if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusUnsupportedMediaType)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": "Content-Type must be application/json",
 			})
-			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
 
 		var req LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": "Invalid request payload",
 			})
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		err := validation.ValidateLogin(req.Email, req.Password)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
@@ -111,17 +111,17 @@ func LoginHandler(svc service.UserService) http.HandlerFunc {
 
 			switch err {
 			case repository.ErrInvalidCredentials, repository.ErrInvalidPassword, repository.ErrUserNotFound:
+				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(map[string]string{
 					"error": "invalid email or password",
 				})
-				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
 
+			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
