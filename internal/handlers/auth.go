@@ -27,30 +27,36 @@ func RegisterHandler(svc service.UserService) http.HandlerFunc {
 
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Method not allowed",
+			})
 			return
 		}
 
 		var req RegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": err.Error(),
+			})
 			return
 		}
 
 		err := validation.ValidateRegister(req.Email, req.Password, req.Username)
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		loginResp, err := svc.Register(r.Context(), req.Email, req.Password, req.Username)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": err.Error(),
 			})
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
