@@ -70,8 +70,9 @@ func main() {
 	svc := service.NewUserService(repository.NewUserRepository(db))
 
 	mux.Handle("POST /register", handlers.RegisterHandler(svc))
+	mux.Handle("POST /login", handlers.LoginHandler(svc))
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
-	mux.Handle("GET /protected", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
+	mux.Handle("GET /me", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
 
 	// server
 	srv := &http.Server{
