@@ -109,12 +109,11 @@ func LoginHandler(svc service.UserService) http.HandlerFunc {
 		if err != nil {
 			slog.Warn("login failed", "email", req.Email, "err", err)
 
-			switch err {
-			case repository.ErrInvalidCredentials, repository.ErrInvalidPassword, repository.ErrUserNotFound:
+			if err == repository.ErrInvalidCredentials ||
+				err == repository.ErrInvalidPassword ||
+				err == repository.ErrUserNotFound {
+				json.NewEncoder(w).Encode(map[string]string{"error": "invalid email or password"})
 				w.WriteHeader(http.StatusUnauthorized)
-				json.NewEncoder(w).Encode(map[string]string{
-					"error": "invalid email or password",
-				})
 				return
 			}
 
