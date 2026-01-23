@@ -15,7 +15,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var jwtSecret = os.Getenv("JWT_SECRET")
+var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateToken(user *models.User) (string, error) {
 	claims := Claims{
@@ -42,7 +42,6 @@ func ValidateToken(tokenString string) (*models.User, error) {
 		}
 		return jwtSecret, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
