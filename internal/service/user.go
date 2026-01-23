@@ -46,6 +46,7 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 		Email:        email,
 		PasswordHash: passwordHash,
 		Username:     username,
+		IsActive: true,
 	}
 
 	err = u.repo.Create(ctx, user)
