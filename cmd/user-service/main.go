@@ -67,12 +67,14 @@ func main() {
 
 	// router
 	mux := http.NewServeMux()
-	svc := service.NewUserService(repository.NewUserRepository(db))
+	repo := repository.NewUserRepository(db)
+	authMiddleware := middleware.NewAuthMiddleware(repo)
+	svc := service.NewUserService(repo)
 
 	mux.Handle("POST /register", handlers.RegisterHandler(svc))
 	mux.Handle("POST /login", handlers.LoginHandler(svc))
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
-	mux.Handle("GET /me", middleware.AuthMiddleware(http.HandlerFunc(meHandler)))
+	mux.Handle("GET /me", authMiddleware(http.HandlerFunc(meHandler)))
 
 	// server
 	srv := &http.Server{
