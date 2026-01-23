@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/Atmosfr/user-service/internal/auth"
 	"github.com/Atmosfr/user-service/internal/models"
@@ -46,7 +47,10 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 		Email:        email,
 		PasswordHash: passwordHash,
 		Username:     username,
-		IsActive: true,
+		IsActive:     true,
+		Role:         "user",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	err = u.repo.Create(ctx, user)
