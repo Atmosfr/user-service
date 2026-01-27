@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -18,6 +19,10 @@ type Claims struct {
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateToken(user *models.User) (string, error) {
+	if user == nil {
+		return "", errors.New("user is nil")
+	}
+
 	claims := Claims{
 		UserID: user.ID,
 		Role:   user.Role,
