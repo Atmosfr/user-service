@@ -19,6 +19,21 @@ func TestGenerateToken(t *testing.T) {
 			user:    &models.User{ID: 1, Role: "user"},
 			wantErr: false,
 		},
+		{
+			name:    "generate token for admin user",
+			user:    &models.User{ID: 1, Role: "admin"},
+			wantErr: false,
+		},
+		{
+			name:    "empty role is allowed",
+			user:    &models.User{ID: 1, Role: ""},
+			wantErr: false,
+		},
+		{
+			name:    "nil user is not allowed",
+			user:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -58,6 +73,10 @@ func TestGenerateToken(t *testing.T) {
 
 			if claims.ExpiresAt.Unix() <= time.Now().Unix() {
 				t.Errorf("token expired immediately")
+			}
+
+			if claims.IssuedAt.Unix() > time.Now().Unix() {
+				t.Errorf("token issued in the future")
 			}
 		})
 	}
