@@ -23,6 +23,10 @@ func GenerateToken(user *models.User, duration time.Duration) (string, error) {
 		return "", errors.New("user is nil")
 	}
 
+	if user.ID < 1 {
+		return "", errors.New("invalid user ID")
+	}
+
 	claims := Claims{
 		UserID: user.ID,
 		Role:   user.Role,
@@ -53,6 +57,14 @@ func ValidateToken(tokenString string) (*models.User, error) {
 
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
+	}
+
+	if claims.UserID == 0 {
+		return nil, errors.New("missing or invalid user_id claim")
+	}
+
+	if claims.IssuedAt != nil && claims.IssuedAt.Unix() > time.Now().Unix() {
+		return nil, jwt.ErrTokenNotValidYet
 	}
 
 	user := &models.User{
