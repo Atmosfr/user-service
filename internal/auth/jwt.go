@@ -18,7 +18,7 @@ type Claims struct {
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
-func GenerateToken(user *models.User) (string, error) {
+func GenerateToken(user *models.User, duration time.Duration) (string, error) {
 	if user == nil {
 		return "", errors.New("user is nil")
 	}
@@ -27,7 +27,7 @@ func GenerateToken(user *models.User) (string, error) {
 		UserID: user.ID,
 		Role:   user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
