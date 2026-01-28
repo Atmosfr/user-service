@@ -34,12 +34,17 @@ func TestGenerateToken(t *testing.T) {
 			user:    nil,
 			wantErr: true,
 		},
+		{
+			name:    "invalid user ID",
+			user:    &models.User{ID: 0, Role: "user"},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			token, err := GenerateToken(tt.user)
+			token, err := GenerateToken(tt.user, time.Hour*24)
 
 			if tt.wantErr {
 				if err == nil {
@@ -80,4 +85,129 @@ func TestGenerateToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateToken(t *testing.T) {
+	validUser := &models.User{ID: 1, Role: "user"}
+	validToken, _ := GenerateToken(validUser, time.Hour*24)
+	expiredToken, _ := GenerateToken(validUser, -time.Hour)
+
+	tests := []struct {
+		name     string
+		token    string
+		wantUser *models.User
+		wantErr  bool
+	}{
+		{
+			name:     "valid token",
+			token:    validToken,
+			wantUser: validUser,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid signature",
+			token:    validToken + "tampered",
+			wantUser: nil,
+			wantErr:  true,
+		},
+		{
+			name:     "expired token",
+			token:    expiredToken,
+			wantUser: nil,
+			wantErr:  true,
+		},
+		{
+			name: "zero duration token",
+			token: generateTamperedToken(t, validUser, func(claims *Claims) {
+				claims.ExpiresAt = jwt.NewNumericDate(time.Now())
+			}, jwt.SigningMethodHS256),
+			wantUser: nil,
+			wantErr:  true,
+		},
+		{
+			name:     "token without user_id",
+			token:    generateTokenWithoutUserID(t, validUser),
+			wantUser: nil,
+			wantErr:  true,
+		},
+		{
+			name:     "invalid token",
+			token:    validToken + "invalid",
+			wantUser: nil,
+			wantErr:  true,
+		},
+		{
+			name: "token with future issued_at",
+			token: generateTamperedToken(t, validUser, func(c *Claims) {
+				c.IssuedAt = jwt.NewNumericDate(time.Now().Add(time.Hour))
+			}, jwt.SigningMethodHS256),
+			wantUser: nil,
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			user, err := ValidateToken(tt.token)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			if user.ID != tt.wantUser.ID {
+				t.Errorf("expected user ID %v, got %v", tt.wantUser.ID, user.ID)
+			}
+
+			if user.Role != tt.wantUser.Role {
+				t.Errorf("expected user role %v, got %v", tt.wantUser.Role, user.Role)
+			}
+		})
+	}
+}
+
+func generateTamperedToken(t *testing.T, user *models.User, modify func(*Claims), signingMethod jwt.SigningMethod) string {
+	t.Helper()
+	claims := Claims{
+		UserID: user.ID,
+		Role:   user.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	modify(&claims)
+	token := jwt.NewWithClaims(signingMethod, claims)
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		t.Fatalf("failed to sign tampered token: %v", err)
+	}
+	return tokenString
+}
+
+func generateTokenWithoutUserID(t *testing.T, user *models.User) string {
+	t.Helper()
+	claims := Claims{
+		Role: user.Role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	s, err := token.SignedString(jwtSecret)
+	if err != nil {
+		t.Fatalf("failed to sign token without user_id: %v", err)
+	}
+	return s
 }
