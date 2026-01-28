@@ -69,7 +69,7 @@ type RegisterRequest struct {
 
 type LoginRequest struct {
 	Email    string `validate:"required,email"`
-	Password string `validate:"required"`
+	Password string `validate:"required,min=8"`
 }
 
 func ValidateRegister(email, password, username string) error {
@@ -90,7 +90,7 @@ func ValidateRegister(email, password, username string) error {
 			case "required":
 				switch e.Field() {
 				case "Password":
-					return ErrPasswordTooShort
+					return ErrInvalidCredentials
 				case "Email":
 					return ErrInvalidEmail
 				case "Username":
@@ -137,7 +137,7 @@ func ValidateLogin(email, password string) error {
 			case "required":
 				switch e.Field() {
 				case "Password":
-					return ErrPasswordTooShort
+					return ErrInvalidCredentials
 				case "Email":
 					return ErrInvalidEmail
 				default:
@@ -145,6 +145,10 @@ func ValidateLogin(email, password string) error {
 				}
 			case "email":
 				return ErrInvalidEmail
+			case "min":
+				if e.Field() == "Password" {
+					return ErrPasswordTooShort
+				}
 			}
 		}
 	}
