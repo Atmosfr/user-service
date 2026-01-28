@@ -58,7 +58,7 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 		return nil, err
 	}
 
-	token, err := auth.GenerateToken(user)
+	token, err := auth.GenerateToken(user, time.Hour*24)
 	if err != nil {
 		slog.Error("failed to generate token", "err", err)
 		return nil, err
@@ -90,7 +90,7 @@ func (u *userService) Login(ctx context.Context, email, password string) (*Login
 		return nil, repository.ErrInvalidPassword
 	}
 
-	token, err := auth.GenerateToken(user)
+	token, err := auth.GenerateToken(user, time.Hour*24)
 	if err != nil {
 		slog.Error("failed to generate token", "err", err)
 		return nil, err
