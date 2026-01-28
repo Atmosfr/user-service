@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const AccessTokenDuration = time.Hour * 24
+
 type UserService interface {
 	Register(ctx context.Context, email, password, username string) (*LoginResponse, error)
 	Login(ctx context.Context, email, password string) (*LoginResponse, error)
@@ -58,7 +60,7 @@ func (u *userService) Register(ctx context.Context, email, password, username st
 		return nil, err
 	}
 
-	token, err := auth.GenerateToken(user, time.Hour*24)
+	token, err := auth.GenerateToken(user, AccessTokenDuration)
 	if err != nil {
 		slog.Error("failed to generate token", "err", err)
 		return nil, err
@@ -90,7 +92,7 @@ func (u *userService) Login(ctx context.Context, email, password string) (*Login
 		return nil, repository.ErrInvalidPassword
 	}
 
-	token, err := auth.GenerateToken(user, time.Hour*24)
+	token, err := auth.GenerateToken(user, AccessTokenDuration)
 	if err != nil {
 		slog.Error("failed to generate token", "err", err)
 		return nil, err
