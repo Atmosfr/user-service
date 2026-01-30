@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Atmosfr/user-service/internal/models"
@@ -16,9 +15,18 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+var JwtSecret []byte
 
-func GenerateToken(user *models.User, duration time.Duration) (string, error) {
+func InitJWT(secret string) error {
+	if secret == "" {
+		return errors.New("jwt secret is empty")
+	}
+	JwtSecret = []byte(secret)
+	return nil
+}
+
+
+func GenerateToken(user *models.User, duration time.Duration, jwtSecret []byte) (string, error) {
 	if len(jwtSecret) == 0 {
 		return "", errors.New("jwt secret is empty")
 	}
@@ -46,7 +54,11 @@ func GenerateToken(user *models.User, duration time.Duration) (string, error) {
 	return tokenString, err
 }
 
-func ValidateToken(tokenString string) (*models.User, error) {
+func ValidateToken(tokenString string, jwtSecret []byte) (*models.User, error) {
+	if len(jwtSecret) == 0 {
+		return nil, errors.New("jwt secret is empty")
+	}
+
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
