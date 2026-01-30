@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Atmosfr/user-service/internal/auth"
 	"github.com/Atmosfr/user-service/internal/handlers"
 	"github.com/Atmosfr/user-service/internal/middleware"
 	"github.com/Atmosfr/user-service/internal/repository"
@@ -46,6 +47,11 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	secret := os.Getenv("JWT_SECRET")
+	if err := auth.InitJWT(secret); err != nil {
+		slog.Error("failed to initialize jwt", "error", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
