@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -19,24 +18,23 @@ var JwtSecret []byte
 
 func InitJWT(secret string) error {
 	if secret == "" {
-		return errors.New("jwt secret is empty")
+		return ErrEmptyJwtSecret
 	}
 	JwtSecret = []byte(secret)
 	return nil
 }
 
-
 func GenerateToken(user *models.User, duration time.Duration, jwtSecret []byte) (string, error) {
 	if len(jwtSecret) == 0 {
-		return "", errors.New("jwt secret is empty")
+		return "", ErrEmptyJwtSecret
 	}
 
 	if user == nil {
-		return "", errors.New("user is nil")
+		return "", ErrUserIsNil
 	}
 
 	if user.ID < 1 {
-		return "", errors.New("invalid user ID")
+		return "", ErrInvalidUserId
 	}
 
 	claims := Claims{
@@ -56,7 +54,7 @@ func GenerateToken(user *models.User, duration time.Duration, jwtSecret []byte) 
 
 func ValidateToken(tokenString string, jwtSecret []byte) (*models.User, error) {
 	if len(jwtSecret) == 0 {
-		return nil, errors.New("jwt secret is empty")
+		return nil, ErrEmptyJwtSecret
 	}
 
 	claims := &Claims{}
@@ -72,11 +70,11 @@ func ValidateToken(tokenString string, jwtSecret []byte) (*models.User, error) {
 	}
 
 	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	if claims.UserID == 0 {
-		return nil, errors.New("missing or invalid user_id claim")
+		return nil, ErrInvalidUserId
 	}
 
 	if claims.IssuedAt != nil && claims.IssuedAt.Unix() > time.Now().Unix() {
