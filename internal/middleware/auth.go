@@ -42,7 +42,7 @@ func NewAuthMiddleware(repo repository.UserRepository) func(http.Handler) http.H
 				return
 			}
 
-			user, err := auth.ValidateToken(token)
+			user, err := auth.ValidateToken(token, auth.JwtSecret)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
