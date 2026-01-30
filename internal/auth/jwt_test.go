@@ -9,6 +9,8 @@ import (
 )
 
 func TestGenerateToken(t *testing.T) {
+	JwtSecret = []byte("secret")
+
 	tests := []struct {
 		name    string
 		user    *models.User
@@ -44,7 +46,7 @@ func TestGenerateToken(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			token, err := GenerateToken(tt.user, time.Hour*24)
+			token, err := GenerateToken(tt.user, time.Hour*24, JwtSecret)
 
 			if tt.wantErr {
 				if err == nil {
@@ -59,7 +61,7 @@ func TestGenerateToken(t *testing.T) {
 			}
 
 			parsedToken, err := jwt.ParseWithClaims(token, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-				return jwtSecret, nil
+				return JwtSecret, nil
 			})
 			if err != nil {
 				t.Errorf("failed to parse generated token: %v", err)
@@ -88,9 +90,10 @@ func TestGenerateToken(t *testing.T) {
 }
 
 func TestValidateToken(t *testing.T) {
+	JwtSecret = []byte("secret")
 	validUser := &models.User{ID: 1, Role: "user"}
-	validToken, _ := GenerateToken(validUser, time.Hour*24)
-	expiredToken, _ := GenerateToken(validUser, -time.Hour)
+	validToken, _ := GenerateToken(validUser, time.Hour*24, JwtSecret)
+	expiredToken, _ := GenerateToken(validUser, -time.Hour, JwtSecret)
 
 	tests := []struct {
 		name     string
@@ -150,7 +153,7 @@ func TestValidateToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			user, err := ValidateToken(tt.token)
+			user, err := ValidateToken(tt.token, JwtSecret)
 
 			if tt.wantErr {
 				if err == nil {
@@ -188,7 +191,7 @@ func generateTamperedToken(t *testing.T, user *models.User, modify func(*Claims)
 
 	modify(&claims)
 	token := jwt.NewWithClaims(signingMethod, claims)
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := token.SignedString(JwtSecret)
 	if err != nil {
 		t.Fatalf("failed to sign tampered token: %v", err)
 	}
@@ -205,7 +208,7 @@ func generateTokenWithoutUserID(t *testing.T, user *models.User) string {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	s, err := token.SignedString(jwtSecret)
+	s, err := token.SignedString(JwtSecret)
 	if err != nil {
 		t.Fatalf("failed to sign token without user_id: %v", err)
 	}
