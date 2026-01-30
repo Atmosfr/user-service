@@ -19,6 +19,10 @@ type Claims struct {
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
 func GenerateToken(user *models.User, duration time.Duration) (string, error) {
+	if len(jwtSecret) == 0 {
+		return "", errors.New("jwt secret is empty")
+	}
+
 	if user == nil {
 		return "", errors.New("user is nil")
 	}
