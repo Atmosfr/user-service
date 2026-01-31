@@ -120,8 +120,8 @@ func LoginHandler(svc service.UserService) http.HandlerFunc {
 			if err == repository.ErrInvalidCredentials ||
 				err == repository.ErrInvalidPassword ||
 				err == repository.ErrUserNotFound {
-				json.NewEncoder(w).Encode(map[string]string{"error": "invalid email or password"})
 				w.WriteHeader(http.StatusUnauthorized)
+				json.NewEncoder(w).Encode(map[string]string{"error": "invalid email or password"})
 				return
 			}
 
