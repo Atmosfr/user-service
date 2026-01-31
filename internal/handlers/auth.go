@@ -33,6 +33,14 @@ func RegisterHandler(svc service.UserService) http.HandlerFunc {
 			return
 		}
 
+		if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Content-Type must be application/json",
+			})
+			return
+		}
+
 		var req RegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
