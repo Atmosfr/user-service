@@ -6,7 +6,9 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/redis/go-redis/v9 v9.0.4
 	github.com/stretchr/testify v1.11.1
+	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.47.0
 )
 
@@ -23,10 +25,8 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/redis/go-redis/v9 v9.0.4 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/ulule/limiter/v3 v3.11.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
