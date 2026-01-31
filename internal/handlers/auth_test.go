@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Atmosfr/user-service/internal/models"
+	"github.com/Atmosfr/user-service/internal/repository"
 	"github.com/Atmosfr/user-service/internal/service"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -205,6 +206,160 @@ func TestRegisterHandler(t *testing.T) {
 			}
 
 			svc.AssertExpectations(t)
+		})
+	}
+}
+
+func TestLoginHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		reqParams      LoginRequest
+		requestBody    string
+		setupMock      func(svc *mockUserService)
+		method         string
+		contentType    string
+		expectedStatus int
+		wantErr        string
+	}{
+		{
+			name: "valid login request",
+			reqParams: LoginRequest{
+				Email:    "LhV4X@example.com",
+				Password: "StrongP@ssw0rd!",
+			},
+			requestBody: `{"email": "LhV4X@example.com", "password": "StrongP@ssw0rd!"}`,
+			method:      http.MethodPost,
+			contentType: "application/json",
+			setupMock: func(svc *mockUserService) {
+				svc.On("Login", mock.Anything, "LhV4X@example.com", "StrongP@ssw0rd!").Return(&service.LoginResponse{
+					User: &models.User{
+						ID:        1,
+						Email:     "LhV4X@example.com",
+						Username:  "testuser",
+						Role:      "user",
+						IsActive:  true,
+						CreatedAt: time.Now(),
+						UpdatedAt: time.Now(),
+					},
+					Token: "mocked-jwt-token",
+				}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			wantErr:        "",
+		},
+		{
+			name:           "invalid http method",
+			requestBody:    `{"email": "LhV4X@example.com", "password": "StrongP@ssw0rd!"}`,
+			method:         http.MethodGet,
+			contentType:    "application/json",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusMethodNotAllowed,
+			wantErr:        "Method not allowed",
+		},
+		{
+			name:           "invalid content type",
+			requestBody:    `{"email": "LhV4X@example.com", "password": "StrongP@ssw0rd!"}`,
+			method:         http.MethodPost,
+			contentType:    "text/plain",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusUnsupportedMediaType,
+			wantErr:        "Content-Type must be application/json",
+		},
+		{
+			name:           "invalid login request",
+			requestBody:    `{invalid json}`,
+			method:         http.MethodPost,
+			contentType:    "application/json",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        "Invalid request payload",
+		},
+		{
+			name:           "empty email",
+			requestBody:    `{"email": "", "password": "StrongP@ssw0rd!"}`,
+			method:         http.MethodPost,
+			contentType:    "application/json",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        "invalid email format",
+		},
+		{
+			name:           "empty password",
+			requestBody:    `{"email": "LhV4X@example.com", "password": ""}`,
+			method:         http.MethodPost,
+			contentType:    "application/json",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        "invalid credentials",
+		},
+		{
+			name:           "invalid email format",
+			requestBody:    `{"email": "invalid-email", "password": "StrongP@ssw0rd!"}`,
+			method:         http.MethodPost,
+			contentType:    "application/json",
+			setupMock:      func(svc *mockUserService) {},
+			expectedStatus: http.StatusBadRequest,
+			wantErr:        "invalid email format",
+		},
+		{
+			name:        "invalid password",
+			requestBody: `{"email": "LhV4X@example.com", "password": "StrongP@ssw0rd!"}`,
+			method:      http.MethodPost,
+			contentType: "application/json",
+			setupMock: func(svc *mockUserService) {
+				svc.On("Login", mock.Anything, "LhV4X@example.com", "StrongP@ssw0rd!").Return((*service.LoginResponse)(nil), repository.ErrInvalidPassword)
+			},
+			expectedStatus: http.StatusUnauthorized,
+			wantErr:        "invalid email or password",
+		},
+		{
+			name:        "service returns error",
+			requestBody: `{"email": "LhV4X@example.com", "password": "StrongP@ssw0rd!"}`,
+			method:      http.MethodPost,
+			contentType: "application/json",
+			setupMock: func(svc *mockUserService) {
+				svc.On("Login", mock.Anything, "LhV4X@example.com", "StrongP@ssw0rd!").Return((*service.LoginResponse)(nil), errors.New("service error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			wantErr:        "service error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &mockUserService{}
+			tt.setupMock(svc)
+
+			req, err := http.NewRequest(tt.method, "/login", strings.NewReader(tt.requestBody))
+			req.Header.Set("Content-Type", tt.contentType)
+
+			require.NoError(t, err)
+
+			rr := httptest.NewRecorder()
+			handler := LoginHandler(svc)
+			handler.ServeHTTP(rr, req)
+
+			require.Equal(t, tt.expectedStatus, rr.Code)
+
+			if rr.Code >= 400 {
+				var errResp map[string]string
+				err := json.NewDecoder(rr.Body).Decode(&errResp)
+				require.NoError(t, err, "failed to decode error response")
+				require.Contains(t, errResp["error"], tt.wantErr)
+			}
+
+			if rr.Code == http.StatusOK {
+				var resp service.LoginResponse
+				err := json.NewDecoder(rr.Body).Decode(&resp)
+				require.NoError(t, err)
+				require.Equal(t, tt.reqParams.Email, resp.User.Email)
+				require.NotEmpty(t, resp.User.Role)
+				require.NotEmpty(t, resp.Token)
+				require.Empty(t, resp.User.PasswordHash)
+				require.True(t, resp.User.IsActive)
+				require.NotEmpty(t, resp.User.CreatedAt)
+				require.NotEmpty(t, resp.User.UpdatedAt)
+			}
 		})
 	}
 }
