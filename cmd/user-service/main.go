@@ -77,8 +77,14 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(repo)
 	svc := service.NewUserService(repo)
 
-	mux.Handle("POST /register", handlers.RegisterHandler(svc))
-	mux.Handle("POST /login", handlers.LoginHandler(svc))
+	loginHandler := http.HandlerFunc(handlers.LoginHandler(svc))
+	registerHandler := http.HandlerFunc(handlers.RegisterHandler(svc))
+
+	// apply rate limiting middleware
+	rateLimit := "1-S" //
+	mux.Handle("POST /login", middleware.RateLimitMiddleware(rateLimit)(loginHandler))
+	mux.Handle("POST /register", middleware.RateLimitMiddleware(rateLimit)(registerHandler))
+
 	mux.Handle("GET /health", http.HandlerFunc(healthHandler))
 	mux.Handle("GET /me", authMiddleware(http.HandlerFunc(meHandler)))
 
